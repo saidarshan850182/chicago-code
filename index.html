@@ -239,7 +239,18 @@
   <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <script src="products.js"></script>
-  <script src="script.js"></script>
+  <!-- Load products fresh every visit (bypasses browser cache), then the store logic -->
+  <script>
+    (function () {
+      var p = document.createElement('script');
+      p.src = 'products.js?t=' + Date.now();
+      p.onload = function () {
+        var s = document.createElement('script');
+        s.src = 'script.js';
+        document.body.appendChild(s);
+      };
+      document.body.appendChild(p);
+    })();
+  </script>
 </body>
 </html>

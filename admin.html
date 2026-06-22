@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chicago Code — Staff Admin</title>
+  <meta name="robots" content="noindex" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body class="admin-body">
+
+  <!-- Access gate: GitHub token -->
+  <div class="gate" id="gate">
+    <div class="gate-box">
+      <span class="logo-mark">CC</span>
+      <h2>Staff Access</h2>
+      <p>Paste your GitHub access token to manage and publish products. It's stored only in this browser.</p>
+      <input type="password" id="gateInput" placeholder="github_pat_..." autocomplete="off" />
+      <div class="gate-err" id="gateErr"></div>
+      <button class="btn btn-primary" id="gateBtn" style="width:100%">Connect</button>
+      <p style="margin-top:14px;font-size:0.78rem">
+        <a href="#" id="tokenHelpLink" style="color:var(--accent-2)">How do I get a token?</a>
+      </p>
+      <div id="tokenHelp" style="display:none;text-align:left;font-size:0.78rem;color:var(--muted);margin-top:10px;line-height:1.5">
+        1. Go to <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" style="color:var(--accent-2)">github.com → fine-grained tokens</a><br />
+        2. Repository access → <strong>Only select repositories</strong> → pick <strong>chicago-code</strong><br />
+        3. Permissions → <strong>Contents</strong> → <strong>Read and write</strong><br />
+        4. Generate, copy the token, paste it above.
+      </div>
+    </div>
+  </div>
+
+  <!-- Top bar -->
+  <header class="admin-top">
+    <div class="container admin-top-inner">
+      <a href="index.html" class="logo">
+        <span class="logo-mark">CC</span>
+        <span class="logo-text">CHICAGO CODE<span class="admin-badge">ADMIN</span></span>
+      </a>
+      <div class="admin-actions">
+        <span class="draft-status" id="draftStatus">No changes yet</span>
+        <button class="btn btn-ghost btn-sm" id="addBtn">+ Add Product</button>
+        <button class="btn btn-ghost btn-sm" id="resetBtn">Discard Changes</button>
+        <button class="btn btn-primary btn-sm" id="publishBtn">Publish to Live Site</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="admin-intro">
+      <h1>Product Manager</h1>
+      <p>Add items, upload pictures, and edit names, prices, and stock. When you click <strong>Publish to Live Site</strong>, your changes save straight to GitHub and the store updates automatically in about a minute — no extra steps.</p>
+    </div>
+
+    <div class="admin-list" id="adminList"></div>
+  </main>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="products.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

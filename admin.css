@@ -1,0 +1,74 @@
+/* ===== Chicago Code — admin panel ===== */
+.admin-body { background: var(--bg); min-height: 100vh; }
+
+.admin-top {
+  position: sticky; top: 0; z-index: 20; background: rgba(14,14,15,0.92); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.admin-top-inner { display: flex; align-items: center; justify-content: space-between; height: 66px; gap: 16px; flex-wrap: wrap; }
+.admin-top .logo-text { font-size: 1.3rem; }
+.admin-badge { font-size: 0.7rem; background: var(--accent); color: #fff; padding: 3px 9px; border-radius: 999px; letter-spacing: 0.06em; margin-left: 8px; }
+.admin-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.btn-sm { padding: 9px 16px; font-size: 0.82rem; }
+.draft-status { font-size: 0.78rem; color: var(--muted); }
+.draft-status.saved { color: var(--accent-2); }
+
+.admin-intro { padding: 26px 0 6px; }
+.admin-intro h1 { font-size: 2.4rem; }
+.admin-intro p { color: var(--muted); max-width: 720px; margin-top: 8px; }
+.admin-help {
+  background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent-2);
+  border-radius: 10px; padding: 14px 18px; margin: 18px 0 6px; color: var(--muted); font-size: 0.9rem;
+}
+.admin-help strong { color: var(--text); }
+.admin-help ol { margin: 8px 0 0 18px; }
+.admin-help li { margin: 3px 0; }
+
+.admin-list { padding: 20px 0 80px; display: grid; gap: 16px; }
+
+.admin-card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; display: grid; grid-template-columns: 110px 1fr auto; gap: 18px; align-items: start;
+}
+.admin-thumb {
+  width: 110px; height: 138px; border-radius: 10px; overflow: hidden; background: var(--bg);
+  display: grid; place-items: center; border: 1px solid var(--line); position: relative;
+}
+.admin-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.admin-thumb .tee-svg { width: 70%; height: 70%; }
+.admin-thumb label {
+  position: absolute; bottom: 6px; left: 6px; right: 6px; text-align: center;
+  background: rgba(0,0,0,0.7); color: #fff; font-size: 0.7rem; padding: 5px; border-radius: 6px; cursor: pointer;
+}
+.admin-thumb input[type=file] { display: none; }
+
+.admin-fields { display: grid; grid-template-columns: 2fr 1fr; gap: 10px 14px; }
+.admin-fields .full { grid-column: 1 / -1; }
+.admin-field label { display: block; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.admin-field input, .admin-field select {
+  width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.9rem;
+}
+.admin-field input:focus, .admin-field select:focus { outline: none; border-color: var(--accent-2); }
+
+.admin-card-side { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.del-btn { background: none; border: 1px solid var(--line); color: var(--muted); padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; }
+.del-btn:hover { border-color: var(--accent); color: var(--accent); }
+.id-pill { font-size: 0.7rem; color: var(--muted); }
+
+/* Passcode gate */
+.gate { position: fixed; inset: 0; background: var(--bg); display: grid; place-items: center; z-index: 100; }
+.gate-box { text-align: center; max-width: 340px; padding: 30px; }
+.gate-box .logo-mark { margin: 0 auto 16px; width: 52px; height: 52px; font-size: 1.6rem; }
+.gate-box h2 { font-size: 2rem; }
+.gate-box p { color: var(--muted); font-size: 0.86rem; margin: 6px 0 18px; }
+.gate-box input { width: 100%; padding: 13px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; color: var(--text); text-align: center; font-size: 1rem; margin-bottom: 12px; }
+.gate-box input:focus { outline: none; border-color: var(--accent); }
+.gate-err { color: var(--accent); font-size: 0.82rem; min-height: 1.1em; margin-bottom: 8px; }
+
+@media (max-width: 760px) {
+  .admin-card { grid-template-columns: 90px 1fr; }
+  .admin-thumb { width: 90px; height: 112px; }
+  .admin-card-side { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
+  .admin-fields { grid-template-columns: 1fr 1fr; }
+}

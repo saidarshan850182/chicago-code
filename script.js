@@ -1,20 +1,13 @@
 /* ===== Chicago Code — store logic ===== */
 
-// ---- Product catalog ----
-const PRODUCTS = [
-  { id: 1,  name: 'Wrigley Box Tee',        cat: 'tees',        category: 'Tees',        price: 38,  badge: 'New',     color: '#d6233c' },
-  { id: 2,  name: 'The Loop Heavy Tee',      cat: 'tees',        category: 'Tees',        price: 42,  badge: null,      color: '#2a2a31' },
-  { id: 3,  name: 'Lakefront Pocket Tee',    cat: 'tees',        category: 'Tees',        price: 40,  badge: null,      color: '#41b6e6' },
-  { id: 4,  name: 'Lake Effect Hoodie',      cat: 'hoodies',     category: 'Hoodies',     price: 78,  badge: 'Best',    color: '#1b4965' },
-  { id: 5,  name: 'Pilsen Press Hoodie',     cat: 'hoodies',     category: 'Hoodies',     price: 82,  badge: null,      color: '#d6233c' },
-  { id: 6,  name: 'Second City Crewneck',    cat: 'hoodies',     category: 'Hoodies',     price: 68,  badge: null,      color: '#555' },
-  { id: 7,  name: 'Windy City Parka',        cat: 'outerwear',   category: 'Outerwear',   price: 168, badge: 'Limited', color: '#0e0e0f' },
-  { id: 8,  name: 'Division St. Bomber',     cat: 'outerwear',   category: 'Outerwear',   price: 142, badge: null,      color: '#1b4965' },
-  { id: 9,  name: 'Code Cuffed Beanie',      cat: 'accessories', category: 'Accessories', price: 28,  badge: null,      color: '#d6233c' },
-  { id: 10, name: 'Flag Stripe Socks',       cat: 'accessories', category: 'Accessories', price: 16,  badge: null,      color: '#41b6e6' },
-  { id: 11, name: 'CC Snapback Cap',         cat: 'accessories', category: 'Accessories', price: 32,  badge: 'New',     color: '#2a2a31' },
-  { id: 12, name: 'Riverwalk Tote',          cat: 'accessories', category: 'Accessories', price: 24,  badge: null,      color: '#555' },
-];
+// ---- Product catalog (loaded from products.js) ----
+const PRODUCTS = window.CC_PRODUCTS || [];
+
+// Image if the admin uploaded one, otherwise the generated SVG garment
+function productArt(p) {
+  if (p.image) return `<img src="${p.image}" alt="${p.name}" loading="lazy" />`;
+  return garmentSVG(p.color);
+}
 
 // Simple SVG "garment" so the site has art with no external images
 function garmentSVG(color) {
@@ -31,20 +24,32 @@ const grid = document.getElementById('productGrid');
 
 function renderProducts(filter = 'all') {
   const list = filter === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === filter);
-  grid.innerHTML = list.map(p => `
+  if (list.length === 0) {
+    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--muted)">No products here yet.</p>';
+    return;
+  }
+  grid.innerHTML = list.map(p => {
+    const out = (p.stock ?? 0) <= 0;
+    const low = !out && p.stock <= 5;
+    const stockTag = out
+      ? '<span class="stock-tag out">Sold out</span>'
+      : low ? `<span class="stock-tag low">Only ${p.stock} left</span>` : '';
+    return `
     <div class="product-card" data-cat="${p.cat}">
       <div class="product-img">
         ${p.badge ? `<span class="product-badge">${p.badge}</span>` : ''}
-        ${garmentSVG(p.color)}
+        ${productArt(p)}
       </div>
       <div class="product-info">
         <span class="product-cat">${p.category}</span>
         <span class="product-name">${p.name}</span>
-        <span class="product-price">$${p.price.toFixed(2)}</span>
-        <button class="product-add" data-id="${p.id}">Add to Cart</button>
+        <span class="product-price">$${p.price.toFixed(2)} ${stockTag}</span>
+        <button class="product-add" data-id="${p.id}" ${out ? 'disabled' : ''}>
+          ${out ? 'Sold Out' : 'Add to Cart'}
+        </button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 renderProducts();
 
@@ -69,8 +74,10 @@ function saveCart() { localStorage.setItem('cc_cart', JSON.stringify(cart)); }
 function addToCart(id) {
   const product = PRODUCTS.find(p => p.id === id);
   const existing = cart.find(i => i.id === id);
+  const inCart = existing ? existing.qty : 0;
+  if (inCart >= (product.stock ?? 0)) { showToast(`No more ${product.name} in stock`); return; }
   if (existing) existing.qty++;
-  else cart.push({ id, name: product.name, price: product.price, color: product.color, qty: 1 });
+  else cart.push({ id, name: product.name, price: product.price, color: product.color, image: product.image || null, qty: 1 });
   saveCart();
   updateCart();
   showToast(`${product.name} added to cart`);
@@ -79,6 +86,8 @@ function addToCart(id) {
 function changeQty(id, delta) {
   const item = cart.find(i => i.id === id);
   if (!item) return;
+  const product = PRODUCTS.find(p => p.id === id);
+  if (delta > 0 && product && item.qty >= (product.stock ?? 0)) { showToast(`Only ${product.stock} in stock`); return; }
   item.qty += delta;
   if (item.qty <= 0) cart = cart.filter(i => i.id !== id);
   saveCart();
@@ -100,7 +109,7 @@ function updateCart() {
   } else {
     cartItemsEl.innerHTML = cart.map(i => `
       <div class="cart-item">
-        <div class="cart-item-img">${garmentSVG(i.color)}</div>
+        <div class="cart-item-img">${i.image ? `<img src="${i.image}" alt="${i.name}" />` : garmentSVG(i.color)}</div>
         <div class="cart-item-info">
           <div class="cart-item-name">${i.name}</div>
           <div class="cart-item-price">$${i.price.toFixed(2)}</div>

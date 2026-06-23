@@ -1,11 +1,12 @@
 /* ===== Chicago Code — admin panel (publishes straight to GitHub) ===== */
 
-// Your repository — this is where products are saved.
+// Your repository — this is where products and images are saved.
 const GH = {
   owner: 'saidarshan850182',
   repo: 'chicago-code',
   branch: 'main',
-  path: 'products.js',
+  dataPath: 'assets/js/products.js',
+  imageDir: 'assets/images/products',
 };
 
 const TOKEN_KEY = 'cc_gh_token';
@@ -20,6 +21,9 @@ const CATEGORIES = [
 let products = [];
 
 function token() { return localStorage.getItem(TOKEN_KEY) || ''; }
+function ghHeaders() {
+  return { 'Authorization': `Bearer ${token()}`, 'Accept': 'application/vnd.github+json' };
+}
 
 // ---- Garment SVG (same as the store) ----
 function garmentSVG(color) {
@@ -57,10 +61,12 @@ function setStatus(state, msg) {
 // ---- Render the editable list ----
 function render() {
   const list = document.getElementById('adminList');
-  list.innerHTML = products.map(p => `
+  list.innerHTML = products.map(p => {
+    const thumb = p._preview || p.image; // _preview = local preview before deploy finishes
+    return `
     <div class="admin-card" data-id="${p.id}">
       <div class="admin-thumb">
-        ${p.image ? `<img src="${p.image}" alt="${p.name}" />` : garmentSVG(p.color)}
+        ${thumb ? `<img src="${thumb}" alt="${escapeAttr(p.name)}" />` : garmentSVG(p.color)}
         <label>Upload<input type="file" accept="image/*" data-field="image" /></label>
       </div>
       <div class="admin-fields">
@@ -91,8 +97,8 @@ function render() {
         <span class="id-pill">#${p.id}</span>
         <button class="del-btn" data-act="delete">Delete</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
@@ -119,26 +125,60 @@ listEl.addEventListener('input', e => {
   saveDraft();
 });
 
-// Image upload → store as base64 data URL on the product
-listEl.addEventListener('change', e => {
+// ---- Image upload → save the file into assets/images/products/ on GitHub ----
+listEl.addEventListener('change', async e => {
   if (e.target.dataset.field !== 'image') return;
   const card = e.target.closest('.admin-card');
   const id = Number(card.dataset.id);
   const p = products.find(x => x.id === id);
   const file = e.target.files[0];
   if (!file || !p) return;
+  if (!token()) { showToast('Connect with your GitHub token first'); return; }
   if (file.size > 1.5 * 1024 * 1024) { showToast('Image too big — please use one under 1.5 MB'); return; }
-  const reader = new FileReader();
-  reader.onload = () => {
-    p.image = reader.result;
+
+  // Show an instant local preview while the upload happens
+  const previewReader = new FileReader();
+  previewReader.onload = () => { p._preview = previewReader.result; render(); };
+  previewReader.readAsDataURL(file);
+
+  showToast('Uploading image…');
+  try {
+    const path = await uploadImage(file, p.id);
+    p.image = path;        // store the FILE PATH, not the image data
     saveDraft();
-    render();
-    showToast('Image added');
-  };
-  reader.readAsDataURL(file);
+    showToast('Image uploaded — click Publish to make it live');
+  } catch (err) {
+    showToast('Image upload failed: ' + err.message);
+  }
 });
 
-// Delete
+// Read a file as raw base64 (no data: prefix) for the GitHub API
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(',')[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+async function uploadImage(file, productId) {
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const path = `${GH.imageDir}/${productId}-${Date.now()}.${ext}`;
+  const content = await fileToBase64(file);
+  const res = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: ghHeaders(),
+    body: JSON.stringify({ message: `Add product image ${path}`, content, branch: GH.branch }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `status ${res.status}`);
+  }
+  return path;
+}
+
+// ---- Delete ----
 listEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-act="delete"]');
   if (!btn) return;
@@ -185,7 +225,8 @@ function buildFileContent() {
     })},`
   ).join('\n');
   return `/* ===== Chicago Code — product catalog =====
-   Managed through admin.html. Published directly to GitHub. */
+   Managed through admin.html. Published directly to GitHub.
+   Do not edit by hand unless you know what you're doing. */
 window.CC_PRODUCTS = [
 ${lines}
 ];
@@ -193,9 +234,7 @@ ${lines}
 }
 
 // UTF-8 safe base64 (GitHub API needs base64-encoded content)
-function toBase64(str) {
-  return btoa(unescape(encodeURIComponent(str)));
-}
+function toBase64(str) { return btoa(unescape(encodeURIComponent(str))); }
 
 // ---- Publish straight to GitHub ----
 const publishBtn = document.getElementById('publishBtn');
@@ -206,23 +245,18 @@ publishBtn.addEventListener('click', async () => {
   publishBtn.textContent = 'Publishing…';
   setStatus('custom', 'Publishing to GitHub…');
 
-  const apiBase = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}`;
-  const headers = {
-    'Authorization': `Bearer ${token()}`,
-    'Accept': 'application/vnd.github+json',
-  };
-
+  const apiUrl = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.dataPath}`;
   try {
     // 1. Get the current file's SHA (required to update an existing file)
     let sha;
-    const getRes = await fetch(`${apiBase}?ref=${GH.branch}`, { headers });
+    const getRes = await fetch(`${apiUrl}?ref=${GH.branch}`, { headers: ghHeaders() });
     if (getRes.ok) { sha = (await getRes.json()).sha; }
     else if (getRes.status !== 404) { throw new Error(`Could not read repo (${getRes.status})`); }
 
-    // 2. Write the new file
-    const putRes = await fetch(apiBase, {
+    // 2. Write the new data file
+    const putRes = await fetch(apiUrl, {
       method: 'PUT',
-      headers,
+      headers: ghHeaders(),
       body: JSON.stringify({
         message: 'Update products via admin panel',
         content: toBase64(buildFileContent()),
@@ -230,13 +264,13 @@ publishBtn.addEventListener('click', async () => {
         sha,
       }),
     });
-
     if (!putRes.ok) {
       const err = await putRes.json().catch(() => ({}));
       throw new Error(err.message || `Publish failed (${putRes.status})`);
     }
 
     localStorage.removeItem(DRAFT_KEY);
+    products.forEach(p => delete p._preview);
     setStatus('custom', '✓ Published — live in ~1 min');
     showToast('Published! Your store updates in about a minute.');
   } catch (e) {
@@ -268,7 +302,6 @@ async function tryConnect() {
   if (!val) { errEl.textContent = 'Please paste your token.'; return; }
   gateBtn.disabled = true; gateBtn.textContent = 'Connecting…'; errEl.textContent = '';
   try {
-    // Confirm the token can access the repo
     const res = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}`, {
       headers: { 'Authorization': `Bearer ${val}`, 'Accept': 'application/vnd.github+json' },
     });
